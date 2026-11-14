@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="el">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Ψηφιακή βιβλιοθήκη διπλωματικών εργασιών μεταπτυχιακού προγράμματος.">
+<title>Ψηφιακή Βιβλιοθήκη Διπλωματικών</title>
+<style>
+:root{--navy:#15395b;--navy2:#214d73;--ink:#1d2935;--muted:#657587;--line:#dce4eb;--paper:#f4f7fa;--white:#fff;--gold:#b58a42}
+*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.55 system-ui,-apple-system,"Segoe UI",Arial,sans-serif}
+header{background:linear-gradient(120deg,var(--navy),var(--navy2));color:#fff;padding:34px 20px 30px;border-bottom:4px solid var(--gold)}
+.wrap{max-width:1100px;margin:auto;padding:0 20px}.brand{display:flex;gap:16px;align-items:center}.mark{width:54px;height:54px;border:1px solid #ffffff70;border-radius:12px;display:grid;place-items:center;font-size:27px}
+h1{font-size:clamp(24px,4vw,34px);line-height:1.2;margin:0;font-weight:700}.subtitle{margin:8px 0 0;color:#dbe7f1}
+main{padding:30px 0 54px}.intro{margin:0 0 22px;color:var(--muted)}
+.panel{background:var(--white);border:1px solid var(--line);border-radius:14px;padding:22px;box-shadow:0 4px 16px #1836530a}
+.searchgrid{display:grid;grid-template-columns:2fr 1fr 130px;gap:12px}
+label{display:block;font-size:13px;font-weight:700;color:#46576a;margin:0 0 6px}
+input,select{width:100%;height:46px;border:1px solid #cbd6e0;border-radius:8px;padding:0 12px;background:#fff;color:var(--ink);font:inherit}
+input:focus,select:focus{outline:3px solid #b7d2e9;border-color:var(--navy2)}
+.stats{display:flex;justify-content:space-between;gap:12px;align-items:center;margin:20px 2px 12px;color:var(--muted);font-size:14px}
+.results{display:grid;gap:12px}.card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:19px 20px}
+.card h2{font-size:18px;line-height:1.35;margin:0 0 8px;color:var(--navy)}
+.meta{font-size:14px;color:var(--muted);display:flex;flex-wrap:wrap;gap:7px 15px}
+.tag{display:inline-block;background:#edf3f8;color:#294c6b;padding:3px 9px;border-radius:30px;font-size:12px;font-weight:650;margin:10px 5px 0 0}
+.abstract{margin:12px 0 0;color:#425366;font-size:14px}
+.actions{margin-top:14px}.link{display:inline-flex;align-items:center;gap:7px;background:var(--navy);color:#fff;text-decoration:none;padding:9px 14px;border-radius:7px;font-size:14px;font-weight:650}.link:hover{background:#0d2b47}
+.empty,.error{background:#fff;border:1px dashed #bdcbd8;border-radius:12px;padding:28px;text-align:center;color:var(--muted)}
+footer{border-top:1px solid var(--line);padding:20px 0;color:var(--muted);font-size:13px}
+.hidden{display:none!important}
+@media(max-width:720px){.searchgrid{grid-template-columns:1fr}.panel{padding:16px}.stats{align-items:flex-start;flex-direction:column}.card{padding:16px}}
+</style>
+</head>
+<body>
+<header><div class="wrap">
+  <div class="brand"><div class="mark" aria-hidden="true">▤</div><div>
+    <h1>Ψηφιακή Βιβλιοθήκη Διπλωματικών Εργασιών</h1>
+    <p class="subtitle">Ηλεκτρονικό αποθετήριο μεταπτυχιακού προγράμματος</p>
+  </div></div>
+</div></header>
+<main class="wrap">
+  <p class="intro">Αναζητήστε διπλωματικές εργασίες με βάση τον τίτλο, τον συγγραφέα, τη θεματική ενότητα ή λέξεις-κλειδιά.</p>
+  <section class="panel" aria-label="Φίλτρα αναζήτησης">
+    <div class="searchgrid">
+      <div><label for="q">Αναζήτηση</label><input id="q" type="search" placeholder="π.χ. κοινωνικά δίκτυα, τεχνητή νοημοσύνη..." autocomplete="off"></div>
+      <div><label for="category">Θεματική ενότητα</label><select id="category"><option value="">Όλες οι θεματικές</option></select></div>
+      <div><label for="year">Έτος</label><select id="year"><option value="">Όλα τα έτη</option></select></div>
+    </div>
+  </section>
+  <div class="stats"><span id="count">Φόρτωση καταλόγου…</span><span>Ταξινόμηση: νεότερες εργασίες πρώτα</span></div>
+  <section id="results" class="results" aria-live="polite"></section>
+</main>
+<footer><div class="wrap">Ψηφιακή Βιβλιοθήκη Διπλωματικών Εργασιών · Για ζητήματα πρόσβασης ή διορθώσεις στοιχείων, επικοινωνήστε με τη γραμματεία.</div></footer>
+<script>
+const CATALOG_URL = "./catalog.csv";
+let theses = [];
+const $ = id => document.getElementById(id);
+function parseCSV(text){
+  const rows=[]; let row=[], field="", quoted=false;
+  for(let i=0;i<text.length;i++){
+    const c=text[i], n=text[i+1];
+    if(quoted){ if(c==='"'&&n==='"'){field+='"';i++;} else if(c==='"'){quoted=false;} else field+=c; }
+    else if(c==='"') quoted=true;
+    else if(c===','){row.push(field);field="";}
+    else if(c==='\n'){row.push(field);rows.push(row);row=[];field="";}
+    else if(c!=='\r') field+=c;
+  }
+  if(field.length||row.length){row.push(field);rows.push(row);}
+  if(!rows.length)return [];
+  const headers=rows.shift().map(x=>x.trim());
+  return rows.filter(r=>r.some(x=>x.trim())).map(r=>Object.fromEntries(headers.map((h,i)=>[h,(r[i]||"").trim()])));
+}
+function esc(s){return String(s||"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+function uniqueSorted(values,desc=false){return [...new Set(values.filter(Boolean))].sort((a,b)=>desc?b.localeCompare(a,"el"):a.localeCompare(b,"el"));}
+function fillSelect(id,values,placeholder){const el=$(id);el.innerHTML=`<option value="">${placeholder}</option>`+values.map(v=>`<option value="${esc(v)}">${esc(v)}</option>`).join("");}
+function render(){
+  const q=$("q").value.trim().toLocaleLowerCase("el"), cat=$("category").value, year=$("year").value;
+  const filtered=theses.filter(t=>{
+    const hay=[t.Title,t.Author,t.Supervisor,t.Category,t.Keywords,t.Abstract].join(" ").toLocaleLowerCase("el");
+    return (!q||hay.includes(q))&&(!cat||t.Category===cat)&&(!year||t.Year===year);
+  }).sort((a,b)=>(b.Year||"").localeCompare(a.Year||"")||(a.Title||"").localeCompare(b.Title||"","el"));
+  $("count").textContent=`${filtered.length} από ${theses.length} εργασίες`;
+  const host=$("results");
+  if(!filtered.length){host.innerHTML='<div class="empty">Δεν βρέθηκαν εργασίες με αυτά τα κριτήρια.</div>';return;}
+  host.innerHTML=filtered.map(t=>{
+    const keywords=(t.Keywords||"").split(/[;|]/).map(x=>x.trim()).filter(Boolean);
+    const validLink=/^https:\/\/(1drv\.ms|onedrive\.live\.com)\//i.test(t.PDF_Link||"");
+    const link=validLink?`<a class="link" href="${esc(t.PDF_Link)}" target="_blank" rel="noopener noreferrer">Άνοιγμα διπλωματικής (PDF) ↗</a>`:'<span class="meta">Το PDF δεν είναι ακόμη διαθέσιμο.</span>';
+    return `<article class="card"><h2>${esc(t.Title||"Χωρίς τίτλο")}</h2>
+      <div class="meta"><span>Συγγραφέας: ${esc(t.Author)}</span><span>Έτος: ${esc(t.Year)}</span><span>Επιβλέπων: ${esc(t.Supervisor)}</span></div>
+      ${t.Category?`<span class="tag">${esc(t.Category)}</span>`:""}
+      ${keywords.map(k=>`<span class="tag">${esc(k)}</span>`).join("")}
+      ${t.Abstract?`<p class="abstract">${esc(t.Abstract)}</p>`:""}
+      <div class="actions">${link}</div></article>`;
+  }).join("");
+}
+async function init(){
+  try{
+    const response=await fetch(CATALOG_URL,{cache:"no-store"});
+    if(!response.ok)throw new Error("Δεν ήταν δυνατή η φόρτωση του catalog.csv");
+    theses=parseCSV(await response.text()).filter(t=>t.Title);
+    fillSelect("category",uniqueSorted(theses.map(t=>t.Category)),"Όλες οι θεματικές");
+    fillSelect("year",uniqueSorted(theses.map(t=>t.Year),true),"Όλα τα έτη");
+    render();
+  }catch(e){$("count").textContent="Πρόβλημα φόρτωσης";$("results").innerHTML='<div class="error">Δεν ήταν δυνατή η ανάγνωση του καταλόγου. Ελέγξτε ότι το αρχείο catalog.csv βρίσκεται δίπλα στην ιστοσελίδα.</div>';}
+}
+["q","category","year"].forEach(id=>$(id).addEventListener(id==="q"?"input":"change",render));
+init();
+</script>
+</body></html>
